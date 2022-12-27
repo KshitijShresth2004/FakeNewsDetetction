@@ -1,0 +1,95 @@
+import pandas as pd
+import re
+import nltk
+nltk.download('stopwords')
+nltk.download('wordnet')
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn import tree
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
+from sklearn import metrics
+#Reading both data and storing in true and fake variable 
+true = pd.read_csv('https://confrecordings.ams3.digitaloceanspaces.com/1_True1.csv',header=None)
+fake = pd.read_csv('https://confrecordings.ams3.digitaloceanspaces.com/Fake1.csv',header=None)
+true.head(10)
+fake.head(10)
+#Concatenating both dataframes and resetting their index
+fake['Target']='fake'
+true['Target']='true'
+data=pd.concat([fake,true]).reset_index(drop=True)
+data
+#Shuffling the true and fake news data
+data = shuffle(data)
+data = data.reset_index(drop=True)
+col_names=['title','text','subject','date','Target']
+data.columns=col_names
+data
+data.drop(["title",'subject','date'], axis=1 ,inplace=True)
+data
+import nltk
+nltk.download('omw-1.4')
+#Formatting of text into lowercase using lower() and splitting the text() on the basis of space word tokenization
+#Performing lemmatization and removing the stopwords
+wordnet=WordNetLemmatizer()
+corpus=[]
+def clean_text(text):
+  review=re.sub('[^a-zA-Z]',' ',text)
+  review=review.lower()
+  review=review.split()
+#Performing lemmatization and removing the stopwords
+  review=[wordnet.lemmatize(word)
+          for word in review
+          if word not in stopwords.words('english')]
+  review=' '.join(review)
+  return(review)
+  data['text']=data['text'].apply(clean_text)
+data
+#Selecting text column from data as independent variable
+x=data['text']
+y=data['Target']
+#Splitting the data into 80% training and 20% testing data.
+X_train,X_test,y_train,y_test=train_test_split(x,y, test_size = 0.20, random_state=42)
+print(X_train.shape)
+print(X_test.shape)
+print(y_train.shape)
+print(y_test.shape)
+#Converting text column into numerical vectors 
+tfidf_v=TfidfVectorizer()
+X_tfidf=tfidf_v.fit_transform(X_train)
+X_tfidf.shape
+x_tfidf=tfidf_v.transform(X_test)
+x_tfidf.shape
+classifier1=LogisticRegression(random_state=0)
+classifier1.fit(X_tfidf,y_train)
+prediction=classifier1.predict(x_tfidf)
+print('Accuracy score of logistic regression model is {}'.format(round(accuracy_score(y_test, prediction)*100,2)))
+cm=metrics.confusion_matrix(y_test,prediction)
+print(cm)
+classifier2=RandomForestClassifier(n_estimators=100,random_state=0)
+classifier2.fit(X_tfidf,y_train)
+prediction=classifier2.predict(x_tfidf)
+print('Accuracy score of random forest model is {}'.format(round(accuracy_score(y_test, prediction)*100,2)))
+cm=metrics.confusion_matrix(y_test,prediction)
+print(cm)
+classifier3=KNeighborsClassifier(n_neighbors=5)
+classifier3.fit(X_tfidf,y_train)
+prediction=classifier3.predict(x_tfidf)
+print('Accuracy score of KNN model is {}'.format(round(accuracy_score(y_test, prediction)*100,2)))
+cm=metrics.confusion_matrix(y_test,prediction)
+print(cm)
+def prediction(news):
+  new=tfidf_v.transform([news])
+  pred_model=classifier2.predict(new)
+  print(pred_model)
+prediction('House Intelligence Committee Chairman Devin Nunes is going to have a bad day. He s been under the assumption, like many of us, that the Christopher Steele-dossier was what prompted the Russia investigation so he s been lashing out at the Department of Justice and the FBI in order to protect Trump. As it happens, the dossier is not what started the investigation, according to documents obtained by the New York Times.Former Trump campaign adviser George Papadopoulos was drunk in a wine bar when he revealed knowledge of Russian opposition research on Hillary Clinton.On top of that, Papadopoulos wasn t just a covfefe boy for Trump, as his administration has alleged. He had a much larger role, but none so damning as being a drunken fool in a wine bar. Coffee boys  don t help to arrange a New York meeting between Trump and President Abdel Fattah el-Sisi of Egypt two months before the election. It was known before that the former aide set up meetings with world leaders for Trump, but team Trump ran with him being merely a coffee boy.In May 2016, Papadopoulos revealed to Australian diplomat Alexander Downer that Russian officials were shopping around possible dirt on then-Democratic presidential nominee Hillary Clinton. Exactly how much Mr. Papadopoulos said that night at the Kensington Wine Rooms with the Australian, Alexander Downer, is unclear,  the report states.  But two months later, when leaked Democratic emails began appearing online, Australian officials passed the information about Mr. Papadopoulos to their American counterparts, according to four current and former American and foreign officials with direct knowledge of the Australians  role. Papadopoulos pleaded guilty to lying to the F.B.I. and is now a cooperating witness with Special Counsel Robert Mueller s team.This isn t a presidency. It s a badly scripted reality TV show.Photo by Win McNamee/Getty Images.')
+prediction('WASHINGTON (Reuters) - Senate Majority Leader Mitch McConnell said on Monday he was confident the U.S. Congress would be able to reach an agreement to fund the government when the current spending bill ends on Dec. 22 and that there would be no forced government shutdown. â€œThere isnâ€™t any chance we are going to shut the government down. Weâ€™re in discussions, not only on a cap deal, but also on the way forward on appropriations, McConnell told reporters. â€œThe American people need not worry that there is going to be any kind of government shutdown.â€ But U.S. Senate Democratic leader Chuck Schumer said a full-year defense funding bill with short-term money for other programs would fail in the Senate. â€œDemocrats will oppose any budget deal that would allow defense spending to increase while holding down domestic priorities,â€ he said to reporters.  ')
+  
+  
+  
